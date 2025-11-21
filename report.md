@@ -1,0 +1,1 @@
+# utilizing minimax m2 to generate specification, as in exercise 2 I use it to generate test cases
