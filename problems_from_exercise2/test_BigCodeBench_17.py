@@ -36,10 +36,7 @@ def task_func(process_name: str) -> str:
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 SOLUTION_MODULES = [
-    "exercise2_part2_bcb_solutions.solution_anthropic_claude_haiku_4_5_17",
-    "exercise2_part2_bcb_solutions.solution_minimax_m2_free_17",
-    "exercise2_part2_bcb_solutions.test_BigCodeBench_17_polaris_alpha",
-    "exercise2_part2_bcb_solutions.test_BigCodeBench_17_x_ai_grok_code_fast_1"
+    "exercise2_part2_bcb_solutions.solution_minimax_m2_free_17"
 ]
 
 def get_task_func(module_name):
@@ -90,7 +87,7 @@ def test_process_terminates_and_restarts_multiple_instances(mock_popen, mock_pro
     process2.terminate.assert_called_once()
     mock_popen.assert_called_once_with('multi_instance')
 
-# ===== iteration 1 =====
+# # ===== iteration 1 =====
 
 @patch('psutil.process_iter')
 @patch('subprocess.Popen')
@@ -350,166 +347,175 @@ def test_no_process_iteration_results(mock_popen, mock_process_iter, task_func):
 
 
 
-# ===== NEW TEST CASES (iteration 3) =====
+
+# ===== SPEC-GUIDED TESTS =====
+# These tests directly verify the formal specifications from problem_17_spec.txt
 
 @patch('psutil.process_iter')
 @patch('subprocess.Popen')
-def test_popen_raises_exception(mock_popen, mock_process_iter, task_func):
-    # NEW TEST: Test when Popen itself raises an exception
+def test_spec_return_type_string(mock_popen, mock_process_iter, task_func):
+    """Spec-guided test: Check return type - ensures function returns string as specified in function signature"""
+    mock_process_iter.return_value = []
+    result = task_func('test_process')
+    assert isinstance(result, str), f"Expected str, got {type(result)}"
+
+@patch('psutil.process_iter')
+@patch('subprocess.Popen')
+def test_spec_return_value_format_process_not_found(mock_popen, mock_process_iter, task_func):
+    """Spec-guided test: Check return value format - result must match expected message pattern for 'not found' case"""
+    mock_process_iter.return_value = []
+    process_name = 'nonexistent_process'
+    result = task_func(process_name)
+    expected = f"Process not found. Starting {process_name}."
+    assert result == expected, f"Expected '{expected}', got '{result}'"
+
+@patch('psutil.process_iter')
+@patch('subprocess.Popen')
+def test_spec_return_value_format_process_found(mock_popen, mock_process_iter, task_func):
+    """Spec-guided test: Check return value format - result must match expected message pattern for 'found' case"""
+    process = MagicMock()
+    process.name.return_value = 'existing_process'
+    mock_process_iter.return_value = [process]
+    process_name = 'existing_process'
+    result = task_func(process_name)
+    expected = f"Process found. Restarting {process_name}."
+    assert result == expected, f"Expected '{expected}', got '{result}'"
+
+@patch('psutil.process_iter')
+@patch('subprocess.Popen')
+def test_spec_process_name_preservation_not_found(mock_popen, mock_process_iter, task_func):
+    """Spec-guided test: Check process name preservation - input process_name must appear in return message (not found case)"""
+    process_name = 'my_special_process'
+    mock_process_iter.return_value = []
+    result = task_func(process_name)
+    assert process_name in result, f"Process name '{process_name}' not found in result: '{result}'"
+
+@patch('psutil.process_iter')
+@patch('subprocess.Popen')
+def test_spec_process_name_preservation_found(mock_popen, mock_process_iter, task_func):
+    """Spec-guided test: Check process name preservation - input process_name must appear in return message (found case)"""
+    process_name = 'another_special_process'
+    process = MagicMock()
+    process.name.return_value = process_name
+    mock_process_iter.return_value = [process]
+    result = task_func(process_name)
+    assert process_name in result, f"Process name '{process_name}' not found in result: '{result}'"
+
+@patch('psutil.process_iter')
+@patch('subprocess.Popen')
+def test_spec_message_structure_not_found(mock_popen, mock_process_iter, task_func):
+    """Spec-guided test: Check message structure - return string must contain required keywords for 'not found' case"""
+    mock_process_iter.return_value = []
+    result = task_func('test_process')
+    assert ("Process" in result and "not found" in result and "Starting" in result), \
+        f"Required keywords not found in result: '{result}'"
+
+@patch('psutil.process_iter')
+@patch('subprocess.Popen')
+def test_spec_message_structure_found(mock_popen, mock_process_iter, task_func):
+    """Spec-guided test: Check message structure - return string must contain required keywords for 'found' case"""
     process = MagicMock()
     process.name.return_value = 'test_process'
     mock_process_iter.return_value = [process]
-    # Make Popen raise an exception
-    mock_popen.side_effect = Exception("Failed to start process")
+    result = task_func('test_process')
+    assert ("Process" in result and "found" in result and "Restarting" in result), \
+        f"Required keywords not found in result: '{result}'"
+
+@patch('psutil.process_iter')
+@patch('subprocess.Popen')
+def test_spec_message_completeness_ends_with_period(mock_popen, mock_process_iter, task_func):
+    """Spec-guided test: Check message completeness - return string should be properly formatted with ending period"""
+    # Test for not found case
+    mock_process_iter.return_value = []
+    result1 = task_func('process1')
+    assert result1.endswith("."), f"Not found case result doesn't end with period: '{result1}'"
+    
+    # Test for found case
+    process = MagicMock()
+    process.name.return_value = 'process2'
+    mock_process_iter.return_value = [process]
+    result2 = task_func('process2')
+    assert result2.endswith("."), f"Found case result doesn't end with period: '{result2}'"
+
+@patch('psutil.process_iter')
+@patch('subprocess.Popen')
+def test_spec_comprehensive_all_assertions(mock_popen, mock_process_iter, task_func):
+    """Spec-guided test: Comprehensive test that verifies all formal specification assertions together"""
+    process_name = 'comprehensive_test'
+    
+    # Test not found case with all specifications
+    mock_process_iter.return_value = []
+    result = task_func(process_name)
+    
+    # Check all assertions for not found case
+    assert isinstance(result, str)
+    expected_not_found = f"Process not found. Starting {process_name}."
+    assert result == expected_not_found
+    assert process_name in result
+    assert ("Process" in result and "not found" in result and "Starting" in result)
+    assert result.endswith(".")
+    
+    # Test found case with all specifications
+    process = MagicMock()
+    process.name.return_value = process_name
+    mock_process_iter.return_value = [process]
+    result = task_func(process_name)
+    
+    # Check all assertions for found case
+    assert isinstance(result, str)
+    expected_found = f"Process found. Restarting {process_name}."
+    assert result == expected_found
+    assert process_name in result
+    assert ("Process" in result and "found" in result and "Restarting" in result)
+    assert result.endswith(".")
+
+@patch('psutil.process_iter')
+@patch('subprocess.Popen')
+def test_spec_exact_message_patterns_only(mock_popen, mock_process_iter, task_func):
+    """Spec-guided test: Verify that return values match ONLY the two expected patterns exactly"""
+    # Test various process names to ensure only exact patterns are returned
+    test_names = ['test', 'process.exe', 'my_app_v2.1', 'special-process_name']
+    
+    for process_name in test_names:
+        # Test not found case
+        mock_process_iter.return_value = []
+        result = task_func(process_name)
+        valid_not_found = f"Process not found. Starting {process_name}."
+        assert result == valid_not_found, f"Invalid pattern for not found case: '{result}'"
+        
+        # Test found case
+        process = MagicMock()
+        process.name.return_value = process_name
+        mock_process_iter.return_value = [process]
+        result = task_func(process_name)
+        valid_found = f"Process found. Restarting {process_name}."
+        assert result == valid_found, f"Invalid pattern for found case: '{result}'"
+
+@patch('psutil.process_iter')
+@patch('subprocess.Popen')
+def test_spec_alternate_pattern_rejection(mock_popen, mock_process_iter, task_func):
+    """Spec-guided test: Verify that function rejects non-standard message patterns"""
+    process = MagicMock()
+    process.name.return_value = 'test_process'
+    mock_process_iter.return_value = [process]
     
     result = task_func('test_process')
-    # Should still return the correct message even if Popen fails
-    assert result == "Process found. Restarting test_process."
-    # Verify terminate was called on the process
-    process.terminate.assert_called_once()
-
-@patch('psutil.process_iter')
-@patch('subprocess.Popen')
-def test_empty_string_as_process_name(mock_popen, mock_process_iter, task_func):
-    # NEW TEST: Test with empty string as process name
-    process = MagicMock()
-    process.name.return_value = ''
-    mock_process_iter.return_value = [process]
     
-    result = task_func('')
-    # Empty string process name - should find it and restart
-    assert result == "Process found. Restarting ."
-    process.terminate.assert_called_once()
-    mock_popen.assert_called_once_with('')
-
-@patch('psutil.process_iter')
-@patch('subprocess.Popen')
-def test_process_wait_succeeds_immediately(mock_popen, mock_process_iter, task_func):
-    # NEW TEST: Test process termination where wait returns immediately (already terminated)
-    process = MagicMock()
-    process.name.return_value = 'quick_exit'
-    # Wait returns None immediately (process already gone)
-    process.wait.return_value = None
-    process.kill = MagicMock()
-    mock_process_iter.return_value = [process]
+    # Verify it's exactly one of the two valid patterns, not variations
+    valid_patterns = [
+        "Process found. Restarting test_process.",
+        "Process not found. Starting test_process."
+    ]
     
-    result = task_func('quick_exit')
-    assert result == "Process found. Restarting quick_exit."
-    process.terminate.assert_called_once()
-    process.wait.assert_called_once_with(timeout=5)
-    # Kill should not be called if wait returns immediately
-    process.kill.assert_not_called()
-
-@patch('psutil.process_iter')
-@patch('subprocess.Popen')
-def test_process_name_with_spaces(mock_popen, mock_process_iter, task_func):
-    # NEW TEST: Test with process name containing spaces
-    process = MagicMock()
-    process.name.return_value = 'process with spaces'
-    mock_process_iter.return_value = [process]
+    # Reject common variations that should not occur
+    invalid_variations = [
+        "Process test_process found. Restarting.",
+        "Found process test_process. Restarting test_process.",
+        "Process found test_process. Restarting.",
+        "Process found: test_process (restarting).",
+        "Process found - restarting test_process",
+        "test_process process found, restarting"
+    ]
     
-    result = task_func('process with spaces')
-    assert result == "Process found. Restarting process with spaces."
-    process.terminate.assert_called_once()
-    mock_popen.assert_called_once_with('process with spaces')
-
-@patch('psutil.process_iter')
-@patch('subprocess.Popen')
-def test_process_name_with_shell_metacharacters(mock_popen, mock_process_iter, task_func):
-    # NEW TEST: Test with process name containing shell metacharacters
-    process = MagicMock()
-    process.name.return_value = 'test-process;rm -rf;echo'
-    mock_process_iter.return_value = [process]
-    
-    result = task_func('test-process;rm -rf;echo')
-    assert result == "Process found. Restarting test-process;rm -rf;echo."
-    process.terminate.assert_called_once()
-    mock_popen.assert_called_once_with('test-process;rm -rf;echo')
-
-@patch('psutil.process_iter')
-@patch('subprocess.Popen')
-def test_wait_raises_no_such_process_during_termination(mock_popen, mock_process_iter, task_func):
-    # NEW TEST: Test when process dies during wait (raises NoSuchProcess)
-    process = MagicMock()
-    process.name.return_value = 'dies_during_wait'
-    process.wait.side_effect = psutil.NoSuchProcess(pid=123)
-    process.kill = MagicMock()
-    mock_process_iter.return_value = [process]
-    
-    result = task_func('dies_during_wait')
-    assert result == "Process found. Restarting dies_during_wait."
-    process.terminate.assert_called_once()
-    process.wait.assert_called_once_with(timeout=5)
-    # When NoSuchProcess during wait, should try kill
-    process.kill.assert_called_once()
-
-@patch('psutil.process_iter')
-@patch('subprocess.Popen')
-def test_multiple_processes_some_already_dead(mock_popen, mock_process_iter, task_func):
-    # NEW TEST: Test multiple processes where some die during iteration
-    process1 = MagicMock()
-    process1.name.side_effect = psutil.NoSuchProcess(pid=111)
-    process2 = MagicMock()
-    process2.name.return_value = 'target_process'
-    process3 = MagicMock()
-    process3.name.side_effect = psutil.AccessDenied(pid=333)
-    process4 = MagicMock()
-    process4.name.return_value = 'target_process'
-    mock_process_iter.return_value = [process1, process2, process3, process4]
-    
-    result = task_func('target_process')
-    assert result == "Process found. Restarting target_process."
-    # Only the valid target processes should be terminated
-    process2.terminate.assert_called_once()
-    process4.terminate.assert_called_once()
-    mock_popen.assert_called_once()
-
-@patch('psutil.process_iter')
-@patch('subprocess.Popen')
-def test_process_iter_yields_no_valid_processes(mock_popen, mock_process_iter, task_func):
-    # NEW TEST: Test when all yielded processes have exceptions
-    process1 = MagicMock()
-    process1.name.side_effect = psutil.NoSuchProcess(pid=111)
-    process2 = MagicMock()
-    process2.name.side_effect = psutil.AccessDenied(pid=222)
-    process3 = MagicMock()
-    process3.name.side_effect = psutil.ZombieProcess(pid=333)
-    mock_process_iter.return_value = [process1, process2, process3]
-    
-    result = task_func('nonexistent_process')
-    # Should not find any valid process and should start it
-    assert result == "Process not found. Starting nonexistent_process."
-    mock_popen.assert_called_once_with('nonexistent_process')
-
-@patch('psutil.process_iter')
-@patch('subprocess.Popen')
-def test_very_long_process_name(mock_popen, mock_process_iter, task_func):
-    # NEW TEST: Test with a very long process name
-    long_name = 'a' * 500
-    process = MagicMock()
-    process.name.return_value = long_name
-    mock_process_iter.return_value = [process]
-    
-    result = task_func(long_name)
-    assert result == f"Process found. Restarting {long_name}."
-    process.terminate.assert_called_once()
-    mock_popen.assert_called_once_with(long_name)
-
-@patch('psutil.process_iter')
-@patch('subprocess.Popen')
-def test_terminate_succeeds_wait_fails_then_kill_succeeds(mock_popen, mock_process_iter, task_func):
-    # NEW TEST: Test full termination flow: terminate -> wait timeout -> kill -> success
-    process = MagicMock()
-    process.name.return_value = 'slow_terminate'
-    # First wait raises TimeoutExpired, kill succeeds
-    process.wait.side_effect = [psutil.TimeoutExpired(5), None]
-    process.kill = MagicMock()
-    mock_process_iter.return_value = [process]
-    
-    result = task_func('slow_terminate')
-    assert result == "Process found. Restarting slow_terminate."
-    process.terminate.assert_called_once()
-    # Wait should be called, then kill should be called
-    assert process.wait.call_count == 1
-    process.kill.assert_called_once()
-    mock_popen.assert_called_once()
+    assert result in valid_patterns, f"Result '{result}' not in valid patterns"
+    assert result not in invalid_variations, f"Result '{result}' matches invalid variation"

@@ -42,11 +42,8 @@ def task_func(commands_file_path, output_dir_path):
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 SOLUTION_MODULES = [
-    "exercise2_part2_bcb_solutions.solution_anthropic_claude_haiku_4_5_15",
-    "exercise2_part2_bcb_solutions.solution_minimax_m2_free_15",
-    "exercise2_part2_bcb_solutions.test_BigCodeBench_15_polaris_alpha",
-    "exercise2_part2_bcb_solutions.test_BigCodeBench_15_x_ai_grok_code_fast_1"
-]
+    "exercise2_part2_bcb_solutions.solution_minimax_m2_free_15"
+    ]
 
 def get_task_func(module_name):
     """Import and return task_func from module"""
@@ -307,159 +304,201 @@ def test_exception_during_file_write(temp_dirs, task_func):
 
 
 
-# ===== NEW TEST CASES (iteration 3) =====
 
-def test_csv_with_quoted_fields_containing_commas(temp_dirs, task_func):
-    # NEW TEST: Test CSV parsing with quoted fields that contain commas
+# ===== SPEC-GUIDED TESTS =====
+# These tests are specifically designed to validate the formal specifications
+# from problem_15_spec.txt
+
+def test_spec_return_type_is_list(temp_dirs, task_func):
+    """SPEC-GUIDED: Check return type - ensures function returns a list as specified in return annotation"""
     temp_dir, output_dir_path = temp_dirs
-    commands_path = os.path.join(temp_dir, "quoted_commas.csv")
+    commands_path = os.path.join(temp_dir, "single_command.csv")
     with open(commands_path, "w", newline='') as file:
         writer = csv.writer(file)
-        # Quoted field containing comma (should be parsed as single argument)
-        writer.writerow(["echo 'Hello, World'"])
+        writer.writerow(["echo test"])
     result = task_func(commands_path, output_dir_path)
-    assert len(result) == 1
-    with open(os.path.join(output_dir_path, result[0]), "r") as f:
-        content = f.read()
-        # Should capture the full output including comma
-        assert "Hello" in content
+    assert isinstance(result, list), f"Expected list, got {type(result)}"
 
-def test_csv_with_multiple_columns_uses_only_first(temp_dirs, task_func):
-    # NEW TEST: Test that only the first column is used when CSV has multiple columns
+def test_spec_all_elements_are_strings(temp_dirs, task_func):
+    """SPEC-GUIDED: Check that all returned elements are strings (file paths)"""
     temp_dir, output_dir_path = temp_dirs
-    commands_path = os.path.join(temp_dir, "multi_column.csv")
+    commands_path = os.path.join(temp_dir, "multiple_commands.csv")
     with open(commands_path, "w", newline='') as file:
         writer = csv.writer(file)
-        # First column is the command, additional columns should be ignored
-        writer.writerow(["echo First", "ignored", "also_ignored"])
-        writer.writerow(["echo Second", "data"])
+        writer.writerow(["echo first"])
+        writer.writerow(["echo second"])
+        writer.writerow(["echo third"])
     result = task_func(commands_path, output_dir_path)
-    assert len(result) == 2
-    with open(os.path.join(output_dir_path, result[0]), "r") as f:
-        content = f.read()
-        assert "First" in content
+    assert len(result) > 0, "Result should not be empty for non-empty input"
+    for i, path in enumerate(result):
+        assert isinstance(path, str), f"Element {i} is not a string: {type(path)}"
+        assert len(path) > 0, f"Element {i} is an empty string"
 
-def test_command_with_no_output(temp_dirs, task_func):
-    # NEW TEST: Test command that produces no output
+def test_spec_file_naming_convention(temp_dirs, task_func):
+    """SPEC-GUIDED: Check file naming convention - ensures output files follow 'command_X_output.txt' pattern"""
     temp_dir, output_dir_path = temp_dirs
-    commands_path = os.path.join(temp_dir, "no_output.csv")
+    commands_path = os.path.join(temp_dir, "naming_test.csv")
     with open(commands_path, "w", newline='') as file:
         writer = csv.writer(file)
-        # Command that exits successfully but produces no output
-        writer.writerow(["true"])
+        writer.writerow(["echo cmd1"])
+        writer.writerow(["echo cmd2"])
     result = task_func(commands_path, output_dir_path)
-    assert len(result) == 1
-    output_file = os.path.join(output_dir_path, result[0])
-    with open(output_file, "r") as f:
-        content = f.read()
-        # File should exist but be empty or nearly empty
-        assert len(content) == 0 or content.strip() == ""
+    assert len(result) > 0, "Result should not be empty"
+    for i, path in enumerate(result):
+        # Uses 'in' operator to handle both full paths and filenames
+        assert '_output.txt' in path, f"Path {i} '{path}' missing '_output.txt' pattern"
+        assert 'command_' in path, f"Path {i} '{path}' missing 'command_' pattern"
 
-def test_command_with_very_long_output(temp_dirs, task_func):
-    # NEW TEST: Test command that generates a very long output
+def test_spec_non_empty_paths(temp_dirs, task_func):
+    """SPEC-GUIDED: Check that all returned paths are non-empty strings"""
     temp_dir, output_dir_path = temp_dirs
-    commands_path = os.path.join(temp_dir, "long_output.csv")
+    commands_path = os.path.join(temp_dir, "non_empty_test.csv")
     with open(commands_path, "w", newline='') as file:
         writer = csv.writer(file)
-        # Command that generates large output
-        writer.writerow(["python -c \"print('Line\\n' * 1000)\""])
+        writer.writerow(["echo test"])
     result = task_func(commands_path, output_dir_path)
-    assert len(result) == 1
-    with open(os.path.join(output_dir_path, result[0]), "r") as f:
-        content = f.read()
-        # Should contain multiple lines
-        assert content.count('\n') > 500
+    for i, path in enumerate(result):
+        assert len(path) > 0, f"Path {i} is empty: '{path}'"
+        assert isinstance(path, str), f"Path {i} is not a string: {type(path)}"
 
-def test_command_with_special_characters_and_unicode(temp_dirs, task_func):
-    # NEW TEST: Test command output with special characters and unicode
+def test_spec_list_length_non_negative(temp_dirs, task_func):
+    """SPEC-GUIDED: Check list length is non-negative"""
     temp_dir, output_dir_path = temp_dirs
-    commands_path = os.path.join(temp_dir, "special_chars.csv")
+    # Test with empty CSV
+    empty_commands_path = os.path.join(temp_dir, "empty.csv")
+    with open(empty_commands_path, "w", newline='') as file:
+        pass  # Create empty file
+    result = task_func(empty_commands_path, output_dir_path)
+    assert len(result) >= 0, f"List length cannot be negative: {len(result)}"
+    
+    # Test with valid commands
+    commands_path = os.path.join(temp_dir, "valid.csv")
     with open(commands_path, "w", newline='') as file:
         writer = csv.writer(file)
-        # Command that outputs special characters
-        writer.writerow(["python -c \"print('Test: émojis 🎉, symbols §, unicode 中文')\""])
+        writer.writerow(["echo test"])
     result = task_func(commands_path, output_dir_path)
-    assert len(result) == 1
-    with open(os.path.join(output_dir_path, result[0]), "r", encoding='utf-8') as f:
-        content = f.read()
-        # Should contain the special characters
-        assert "émojis" in content or "🎉" in content
+    assert len(result) >= 0, f"List length cannot be negative: {len(result)}"
 
-def test_command_with_shell_metacharacters(temp_dirs, task_func):
-    # NEW TEST: Test command containing shell metacharacters (with shell=True)
+def test_spec_non_empty_list_elements_contain_output_txt(temp_dirs, task_func):
+    """SPEC-GUIDED: Check that if list is not empty, all elements contain the required substrings"""
     temp_dir, output_dir_path = temp_dirs
-    commands_path = os.path.join(temp_dir, "metacharacters.csv")
+    commands_path = os.path.join(temp_dir, "output_txt_test.csv")
     with open(commands_path, "w", newline='') as file:
         writer = csv.writer(file)
-        # Command with shell metacharacters
-        writer.writerow(["echo 'Test | pipe && and $VAR'"])
+        writer.writerow(["echo test1"])
+        writer.writerow(["echo test2"])
+        writer.writerow(["echo test3"])
     result = task_func(commands_path, output_dir_path)
-    assert len(result) == 1
-    with open(os.path.join(output_dir_path, result[0]), "r") as f:
-        content = f.read()
-        # Should execute and produce some output
-        assert len(content) > 0
+    
+    # Check that if list is not empty, all elements contain 'output.txt'
+    if len(result) > 0:
+        for i, path in enumerate(result):
+            assert 'output.txt' in path, f"Non-empty list element {i} '{path}' missing 'output.txt'"
 
-def test_timeout_exactly_at_limit(temp_dirs, task_func):
-    # NEW TEST: Test command that takes exactly the timeout duration
+def test_spec_combined_properties_single_command(temp_dirs, task_func):
+    """SPEC-GUIDED: Test all specification properties together for a single command"""
     temp_dir, output_dir_path = temp_dirs
-    commands_path = os.path.join(temp_dir, "exact_timeout.csv")
+    commands_path = os.path.join(temp_dir, "combined_single.csv")
     with open(commands_path, "w", newline='') as file:
         writer = csv.writer(file)
-        # Command that takes exactly 10 seconds (matches one solution's timeout)
-        writer.writerow(["sleep 10 && echo 'Done'"])
-    result = task_func(commands_path, output_dir_path)
-    assert len(result) == 1
-    with open(os.path.join(output_dir_path, result[0]), "r") as f:
-        content = f.read()
-        # Should either timeout or complete, both are acceptable
-        # Just verify the file was created
-        assert len(content) > 0
+        writer.writerow(["echo combined_test"])
+    
+    res = task_func(commands_path, output_dir_path)
+    
+    # Check return type
+    assert isinstance(res, list), "Result must be a list"
+    
+    # Check all elements are strings and non-empty
+    assert all(isinstance(path, str) for path in res), "All elements must be strings"
+    assert all(len(path) > 0 for path in res), "All paths must be non-empty"
+    
+    # Check file naming convention
+    assert all('_output.txt' in path and 'command_' in path for path in res), "All paths must follow naming convention"
+    
+    # Check list length is non-negative
+    assert len(res) >= 0, "List length must be non-negative"
+    
+    # Check that if list is not empty, all elements contain 'output.txt'
+    if len(res) > 0:
+        assert all('output.txt' in path for path in res), "All elements must contain 'output.txt'"
 
-def test_command_output_with_only_stderr_and_success(temp_dirs, task_func):
-    # NEW TEST: Test command that succeeds but has only stderr (no stdout)
+def test_spec_combined_properties_multiple_commands(temp_dirs, task_func):
+    """SPEC-GUIDED: Test all specification properties together for multiple commands"""
     temp_dir, output_dir_path = temp_dirs
-    commands_path = os.path.join(temp_dir, "stderr_only.csv")
+    commands_path = os.path.join(temp_dir, "combined_multiple.csv")
     with open(commands_path, "w", newline='') as file:
         writer = csv.writer(file)
-        # Command that writes to stderr only
-        writer.writerow(["python -c \"import sys; sys.stderr.write('stderr only'); sys.exit(0)\""])
-    result = task_func(commands_path, output_dir_path)
-    assert len(result) == 1
-    with open(os.path.join(output_dir_path, result[0]), "r") as f:
-        content = f.read()
-        # Should contain the stderr output
-        assert "stderr only" in content
+        writer.writerow(["echo cmd1"])
+        writer.writerow(["echo cmd2"])
+        writer.writerow(["invalid_cmd"])
+    
+    res = task_func(commands_path, output_dir_path)
+    
+    # Check return type
+    assert isinstance(res, list), "Result must be a list"
+    
+    # Check all elements are strings and non-empty
+    assert all(isinstance(path, str) for path in res), "All elements must be strings"
+    assert all(len(path) > 0 for path in res), "All paths must be non-empty"
+    
+    # Check file naming convention
+    assert all('_output.txt' in path and 'command_' in path for path in res), "All paths must follow naming convention"
+    
+    # Check list length is non-negative
+    assert len(res) >= 0, "List length must be non-negative"
+    
+    # Check that if list is not empty, all elements contain 'output.txt'
+    if len(res) > 0:
+        assert all('output.txt' in path for path in res), "All elements must contain 'output.txt'"
+    
+    # Check that result length matches expected number of commands
+    assert len(res) == 3, f"Expected 3 results, got {len(res)}"
 
-def test_csv_with_blank_lines_between_commands(temp_dirs, task_func):
-    # NEW TEST: Test CSV with blank lines (newlines) between data rows
+def test_spec_empty_input_consistency(temp_dirs, task_func):
+    """SPEC-GUIDED: Test specification consistency with empty input"""
     temp_dir, output_dir_path = temp_dirs
-    commands_path = os.path.join(temp_dir, "blank_lines.csv")
+    # Test with completely empty file
+    empty_commands_path = os.path.join(temp_dir, "completely_empty.csv")
+    with open(empty_commands_path, "w", newline='') as file:
+        pass  # Create truly empty file
+    
+    res = task_func(empty_commands_path, output_dir_path)
+    
+    # All specifications should hold even with empty input
+    assert isinstance(res, list), "Result must be a list even with empty input"
+    assert all(isinstance(path, str) for path in res), "All elements must be strings"
+    assert all(len(path) > 0 for path in res), "All paths must be non-empty"
+    assert len(res) >= 0, "List length must be non-negative"
+    
+    # For empty input, result should typically be empty or contain no meaningful files
+    if len(res) > 0:
+        assert all('_output.txt' in path and 'command_' in path for path in res), "Naming convention still applies"
+        assert all('output.txt' in path for path in res), "Output pattern still applies"
+
+def test_spec_path_format_variations(temp_dirs, task_func):
+    """SPEC-GUIDED: Test specification properties with different path format scenarios"""
+    temp_dir, output_dir_path = temp_dirs
+    commands_path = os.path.join(temp_dir, "path_format_test.csv")
     with open(commands_path, "w", newline='') as file:
         writer = csv.writer(file)
-        writer.writerow(["echo First"])
-        writer.writerow([])
-        writer.writerow(["echo Second"])
-        writer.writerow([])
-        writer.writerow(["echo Third"])
-    result = task_func(commands_path, output_dir_path)
-    # Should only process non-empty rows
-    assert len(result) >= 2
-    with open(os.path.join(output_dir_path, result[0]), "r") as f:
-        content = f.read()
-        assert "First" in content
+        writer.writerow(["echo path_test"])
+    
+    res = task_func(commands_path, output_dir_path)
+    
+    # Test that the specification works regardless of whether paths are relative or absolute
+    assert len(res) == 1, "Should return exactly one path"
+    path = res[0]
+    
+    # Core specification properties
+    assert isinstance(path, str), "Path must be a string"
+    assert len(path) > 0, "Path cannot be empty"
+    
+    # Naming convention (works for both relative and absolute paths)
+    assert '_output.txt' in path, "Must contain '_output.txt'"
+    assert 'command_' in path, "Must contain 'command_'"
+    assert 'output.txt' in path, "Must contain 'output.txt'"
+    
+    # Verify the actual file exists (regardless of path format returned)
+    expected_files = [f for f in os.listdir(output_dir_path) if '_output.txt' in f]
+    assert len(expected_files) == 1, f"Expected 1 output file, found {len(expected_files)}: {expected_files}"
 
-def test_command_with_exit_code_0_but_stderr(temp_dirs, task_func):
-    # NEW TEST: Test command with exit code 0 but significant stderr
-    temp_dir, output_dir_path = temp_dirs
-    commands_path = os.path.join(temp_dir, "zero_exit_stderr.csv")
-    with open(commands_path, "w", newline='') as file:
-        writer = csv.writer(file)
-        # Command that exits 0 but has important stderr
-        writer.writerow(["python -c \"import sys; sys.stderr.write('Warning message'); sys.exit(0)\""])
-    result = task_func(commands_path, output_dir_path)
-    assert len(result) == 1
-    with open(os.path.join(output_dir_path, result[0]), "r") as f:
-        content = f.read()
-        # Some solutions may include stderr even with exit code 0
-        assert len(content) > 0

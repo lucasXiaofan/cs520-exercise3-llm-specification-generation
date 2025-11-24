@@ -1,0 +1,26 @@
+# FORMAL SPECIFICATIONS FOR task_func
+# Function signature: def task_func(process_name: str) -> str
+#
+# Let res = task_func(process_name)
+
+# ========== REVIEW STATUS: ALL CORRECT (5/5) ==========
+
+# Check return type - ensures function returns string as specified in function signature
+assert isinstance(res, str)
+# STATUS: CORRECT ✓
+
+# Check return value format - result must match one of the two expected message patterns exactly
+assert res in [f"Process not found. Starting {process_name}.", f"Process found. Restarting {process_name}."]
+# STATUS: CORRECT ✓
+
+# Check process name preservation - the input process_name must appear in the return message for clarity
+assert process_name in res
+# STATUS: CORRECT ✓
+
+# Check message structure - return string must contain required keywords to indicate action taken
+assert ("Process" in res and "not found" in res and "Starting" in res) or ("Process" in res and "found" in res and "Restarting" in res)
+# STATUS: CORRECT ✓
+
+# Check message completeness - return string should be properly formatted with ending period
+assert res.endswith(".")
+# STATUS: CORRECT ✓

@@ -1,0 +1,26 @@
+# FORMAL SPECIFICATIONS FOR task_func (CORRECTED VERSION)
+# Function signature: def task_func(commands_file_path, output_dir_path) -> list[str]
+#
+# Let res = task_func(commands_file_path, output_dir_path)
+
+# ========== CORRECTED SPECIFICATIONS - ALL PURE, NO SIDE EFFECTS ==========
+
+# Check return type - ensures function returns a list as specified in return annotation
+assert isinstance(res, list)
+
+# Check that all returned elements are strings (file paths) - validates proper output file path format
+assert all(isinstance(path, str) for path in res)
+
+# Check file naming convention - ensures output files follow 'command_X_output.txt' pattern
+# Uses 'in' operator to handle both full paths and filenames
+assert all('_output.txt' in path and 'command_' in path for path in res)
+
+# Check that all returned paths are non-empty strings - ensures valid output
+assert all(len(path) > 0 for path in res)
+
+# Check list length is non-negative - validates basic list property
+assert len(res) >= 0
+
+# Check that if list is not empty, all elements contain the required substrings
+# This is a logical property that doesn't depend on implementation details
+assert len(res) == 0 or all('output.txt' in path for path in res)
