@@ -1,6 +1,6 @@
 # CS520 Exercise 3 Report
 - Author: XiaoFan Lu
-- GitHub: [Link to GitHub Repository](https://github.com/lucasXiaofan/cs520-exercise3-llm-specification-generation.git)
+- GitHub: https://github.com/lucasXiaofan/cs520-exercise3-llm-specification-generation
 ## Part 1: Generate, Evaluate, and Refine Specifications
 
 ### 1. Methodology
